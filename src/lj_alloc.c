@@ -197,7 +197,7 @@ static int CALL_MUNMAP(void *ptr, size_t size)
     if (VirtualQuery(cptr, &minfo, sizeof(minfo)) == 0)
       return -1;
     if (minfo.BaseAddress != cptr || minfo.AllocationBase != cptr ||
-	minfo.State != MEM_COMMIT || minfo.RegionSize > size)
+	    minfo.State != MEM_COMMIT || minfo.RegionSize > size)
       return -1;
     if (VirtualFree(cptr, 0, MEM_RELEASE) == 0)
       return -1;

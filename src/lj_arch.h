@@ -648,8 +648,8 @@
 #define LJ_WIN_VALLOC	VirtualAllocFromApp
 extern void *LJ_WIN_LOADLIBA(const char *path);
 #else
-void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, unsigned int flags);
-#define LJ_WIN_VALLOC	SusAlloc
+//void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, unsigned int flags);
+#define LJ_WIN_VALLOC	VirtualAlloc
 #define LJ_WIN_LOADLIBA(path) LoadLibraryExA((path), NULL, 0)
 #endif
 #endif
