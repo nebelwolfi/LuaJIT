@@ -665,7 +665,7 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 #endif
 
 #if LJ_UNWIND_EXT && LJ_HASJIT && !LJ_TARGET_ARM && !(LJ_ABI_WIN && LJ_TARGET_X86)
-#define LJ_UNWIND_JIT		0
+#define LJ_UNWIND_JIT		1
 #else
 #define LJ_UNWIND_JIT		0
 #endif
