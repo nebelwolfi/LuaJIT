@@ -134,7 +134,8 @@ static void ll_unloadlib(void *lib)
 
 static void *ll_load(lua_State *L, const char *path, int gl)
 {
-  HINSTANCE lib = LJ_WIN_LOADLIBA(path);
+  HINSTANCE lib = LJ_WIN_LOADLIBA1(path);
+  if (lib == NULL) lib = LJ_WIN_LOADLIBA2(path);
   if (lib == NULL) pusherror(L);
   UNUSED(gl);
   return lib;

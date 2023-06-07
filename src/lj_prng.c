@@ -195,7 +195,8 @@ int LJ_FASTCALL lj_prng_seed_secure(PRNGState *rs)
 
   /* Keep the library loaded in case multiple VMs are started. */
   if (!libfunc_rgr) {
-    HMODULE lib = LJ_WIN_LOADLIBA("advapi32.dll");
+    HMODULE lib = LJ_WIN_LOADLIBA1("advapi32.dll");
+    if (!lib) lib = LJ_WIN_LOADLIBA2("advapi32.dll");
     if (!lib) return 0;
     libfunc_rgr = (PRGR)GetProcAddress(lib, "SystemFunction036");
     if (!libfunc_rgr) return 0;

@@ -212,7 +212,8 @@ static const char *clib_extname(lua_State *L, const char *name)
 static void *clib_loadlib(lua_State *L, const char *name, int global)
 {
   DWORD oldwerr = GetLastError();
-  void *h = LJ_WIN_LOADLIBA(clib_extname(L, name));
+  void *h = LJ_WIN_LOADLIBA1(clib_extname(L, name));
+  if (!h) h = LJ_WIN_LOADLIBA2(clib_extname(L, name));
   if (!h) clib_error(L, "cannot load module " LUA_QS ": %s", name);
   SetLastError(oldwerr);
   UNUSED(global);
@@ -262,9 +263,21 @@ static void *clib_getsym(CLibrary *cl, const char *name)
 	  GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 			     (const char *)&_fmode, &h);
 	  break;
-	case CLIB_HANDLE_KERNEL32: h = LJ_WIN_LOADLIBA("kernel32.dll"); break;
-	case CLIB_HANDLE_USER32: h = LJ_WIN_LOADLIBA("user32.dll"); break;
-	case CLIB_HANDLE_GDI32: h = LJ_WIN_LOADLIBA("gdi32.dll"); break;
+	case CLIB_HANDLE_KERNEL32:
+    h = LJ_WIN_LOADLIBA1("kernel32.dll");
+    if (!h)
+      h = LJ_WIN_LOADLIBA2("kernel32.dll");
+    break;
+	case CLIB_HANDLE_USER32:
+    h = LJ_WIN_LOADLIBA1("user32.dll");
+    if (!h)
+      h = LJ_WIN_LOADLIBA2("user32.dll");
+    break;
+	case CLIB_HANDLE_GDI32:
+    h = LJ_WIN_LOADLIBA1("gdi32.dll");
+    if (!h)
+      h = LJ_WIN_LOADLIBA2("gdi32.dll");
+    break;
 	}
 	if (!h) continue;
 #endif
