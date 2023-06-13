@@ -307,7 +307,7 @@ void lj_ccallback_mcode_free(CTState *cts)
   void *p = cts->cb.mcode;
   if (p == NULL) return;
 #if LJ_TARGET_WINDOWS
-  VirtualFree(p, 0, MEM_RELEASE);
+  SusFree(p, 0, MEM_RELEASE);
   UNUSED(sz);
 #elif LJ_TARGET_POSIX
   munmap(p, sz);

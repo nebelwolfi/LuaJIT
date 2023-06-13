@@ -76,7 +76,7 @@ static void *mcode_alloc_at(jit_State *J, uintptr_t hint, size_t sz, DWORD prot)
 static void mcode_free(jit_State *J, void *p, size_t sz)
 {
   UNUSED(J); UNUSED(sz);
-  VirtualFree(p, 0, MEM_RELEASE);
+  SusFree(p, 0, MEM_RELEASE);
 }
 
 static int mcode_setprot(void *p, size_t sz, DWORD prot)
