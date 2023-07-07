@@ -129,7 +129,7 @@ static void pusherror(lua_State *L)
 
 static void ll_unloadlib(void *lib)
 {
-  FreeLibrary((HINSTANCE)lib);
+  //FreeLibrary((HINSTANCE)lib);
 }
 
 static void *ll_load(lua_State *L, const char *path, int gl)

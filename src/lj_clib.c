@@ -229,12 +229,12 @@ static void clib_unloadlib(CLibrary *cl)
       void *h = clib_def_handle[i];
       if (h) {
 	clib_def_handle[i] = NULL;
-	FreeLibrary((HINSTANCE)h);
+	//FreeLibrary((HINSTANCE)h);
       }
     }
 #endif
   } else if (cl->handle) {
-    FreeLibrary((HINSTANCE)cl->handle);
+    //FreeLibrary((HINSTANCE)cl->handle);
   }
 }
 

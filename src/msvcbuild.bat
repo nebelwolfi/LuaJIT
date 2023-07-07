@@ -15,7 +15,7 @@
 @setlocal
 @rem Add more debug flags here, e.g. DEBUGCFLAGS=/DLUA_USE_APICHECK /DLUAJIT_USE_SYSMALLOC
 @set DEBUGCFLAGS=
-@set LJCOMPILE=cl /nologo /c /O2 /W3 /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline
+@set LJCOMPILE=cl /nologo /c /O2 /W3 /GS- /EHa- /EHs- /EHc- /Zc:threadSafeInit- /sdl- /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline
 @set LJLINK=link /nologo
 @set LJMT=mt /nologo
 @set LJLIB=lib /nologo /nodefaultlib
@@ -106,6 +106,7 @@ if exist %LJDLLNAME%.manifest^
 %LJCOMPILE% luajit.c
 @if errorlevel 1 goto :BAD
 %LJLINK% /out:luajit.exe luajit.obj %LJLIBNAME%
+REM %LJLINK% /NODEFAULTLIB luajit.obj %LJLIBNAME%
 @if errorlevel 1 goto :BAD
 if exist luajit.exe.manifest^
   %LJMT% -manifest luajit.exe.manifest -outputresource:luajit.exe
@@ -121,7 +122,7 @@ if exist luajit.exe.manifest^
 @echo.
 @echo *******************************************************
 @echo *** Build FAILED -- Please check the error messages ***
-@echo *******************************************************
+@echo *******************************************************
 @goto :END
 :FAIL
 @echo You must open a "Visual Studio Command Prompt" to run this script
