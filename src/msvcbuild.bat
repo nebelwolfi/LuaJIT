@@ -15,7 +15,7 @@
 @setlocal
 @rem Add more debug flags here, e.g. DEBUGCFLAGS=/DLUA_USE_APICHECK /DLUAJIT_USE_SYSMALLOC
 @set DEBUGCFLAGS=
-@set LJCOMPILE=cl /nologo /c /O2 /W3 /GS- /EHa- /EHs- /EHc- /Zc:threadSafeInit- /sdl- /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline
+@set LJCOMPILE=clang-cl /nologo /c /O2z /W3 /GS- /Zc:threadSafeInit- /sdl- /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline /Zi
 @set LJLINK=link /nologo
 @set LJMT=mt /nologo
 @set LJLIB=lib /nologo /nodefaultlib

@@ -336,9 +336,9 @@ static void err_unwind_win_jit(global_State *g, int errcode)
       ExitNo exitno;
       uintptr_t stub = lj_trace_unwind(G2J(g), addr - sizeof(MCode), &exitno);
       if (stub) {  /* Jump to side exit to unwind the trace. */
-	ctx.CONTEXT_REG_PC = stub;
-	G2J(g)->exitcode = errcode;
-	RtlRestoreContext(&ctx, NULL);  /* Does not return. */
+        ctx.CONTEXT_REG_PC = stub;
+        G2J(g)->exitcode = errcode;
+        RtlRestoreContext(&ctx, NULL);  /* Does not return. */
       }
       break;
     }

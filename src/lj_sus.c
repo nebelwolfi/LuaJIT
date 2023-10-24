@@ -82,7 +82,7 @@ void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, uns
 int SusFree(void* lpAddress, size_t dwSize, unsigned int dwFreeType)
 {
   if (lpAddress == NULL)
-    return NULL;
+    return 0;
 
   //unsigned int SuperJunk = 0xDEADC0DE;
   //for (unsigned int i = 0; i < 0x50 / sizeof(unsigned int); ++i)
@@ -115,19 +115,19 @@ int SusFree(void* lpAddress, size_t dwSize, unsigned int dwFreeType)
 size_t SusQuery(void* lpAddress, void* lpBuffer, size_t dwLength)
 {
   if (lpAddress == NULL)
-    return NULL;
+    return 0;
 
   if (mbi_vector == NULL)
-    return NULL;
+    return 0;
 
   for (size_t i = 0; i < mbi_vector->size; ++i)
   {
     if (mbi_vector->data[i].BaseAddress == lpAddress)
     {
       *(PMEMORY_BASIC_INFORMATION)lpBuffer = mbi_vector->data[i];
-      return lpBuffer;
+      return sizeof(MEMORY_BASIC_INFORMATION);
     }
   }
 
-  return NULL;
+  return 0;
 }

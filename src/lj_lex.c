@@ -196,7 +196,10 @@ unsigned int HashIgnoreCaseFNV1a(const char *name, unsigned int len)
 {
   unsigned int h = 0x811C9DC5;
   for (unsigned int i = 0; i < len; i++) {
-    h ^= tolower(name[i]);
+    if (name[i] >= 'A' && name[i] <= 'Z')
+      h ^= name[i] + 0x20;
+    else
+      h ^= name[i];
     h *= 0x01000193;
   }
   return h;
@@ -217,7 +220,10 @@ unsigned int HashIgnoreCaseFNV1(const char *name, unsigned int len)
   unsigned int h = 2166136261U;
   for (unsigned int i = 0; i < len; i++) {
     h *= 16777619;
-    h ^= tolower(name[i]);
+    if (name[i] >= 'A' && name[i] <= 'Z')
+      h ^= name[i] + 0x20;
+    else
+      h ^= name[i];
   }
   return h;
 }
@@ -235,7 +241,10 @@ unsigned int HashIgnoreCaseSDBM(const char *name, unsigned int len)
 {
   unsigned int h = 0;
   for (unsigned int i = 0; i < len; i++) {
-    h = tolower(name[i]) + (h << 6) + (h << 16) - h;
+    if (name[i] >= 'A' && name[i] <= 'Z')
+      h = (name[i] + 0x20) + (h << 6) + (h << 16) - h;
+    else
+      h = name[i] + (h << 6) + (h << 16) - h;
   }
   return h;
 }
@@ -257,7 +266,10 @@ unsigned int HashIgnoreCaseELF(const char *name, unsigned int len)
 {
   unsigned int h = 0;
   for (unsigned int i = 0; i < len; i++) {
-    h = (h << 4) + tolower(name[i]);
+    if (name[i] >= 'A' && name[i] <= 'Z')
+      h = (h << 4) + (name[i] + 0x20);
+    else
+      h = (h << 4) + name[i];
     unsigned int g = h & 0xF0000000;
     if (g) {
       h ^= (g >> 24) ^ g;

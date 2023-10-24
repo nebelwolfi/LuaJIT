@@ -2451,27 +2451,6 @@ static void parse_func(LexState *ls, BCLine line)
   fs->bcbase[fs->pc - 1].line = line;  /* Set line for the store. */
 }
 
-/* Parse 'function' statement. */
-static void parse_lambda_func(LexState *ls, BCLine line)
-{
-  FuncState *fs;
-  ExpDesc v, b;
-  int needself = 0;
-  lj_lex_next(ls);  /* Skip '`'. */
-  /* Parse function name. */
-  var_lookup(ls, &v);
-  while (ls->tok == '.')  /* Multiple dot-separated fields. */
-    expr_field(ls, &v);
-  if (ls->tok == ':') {  /* Optional colon to signify method call. */
-    needself = 1;
-    expr_field(ls, &v);
-  }
-  parse_lambda_body(ls, &b, needself, line);
-  fs = ls->fs;
-  bcemit_store(fs, &v, &b);
-  fs->bcbase[fs->pc - 1].line = line;  /* Set line for the store. */
-}
-
 /* -- Control transfer statements ----------------------------------------- */
 
 /* Check for end of block. */
@@ -2503,7 +2482,7 @@ static void parse_return(LexState *ls)
   FuncState *fs = ls->fs;
   lj_lex_next(ls);  /* Skip 'return'. */
   fs->flags |= PROTO_HAS_RETURN;
-  if (parse_isend(ls->tok) || ls->tok == ';') {  /* Bare return. */
+  if (parse_lambda_isend(ls->tok) || ls->tok == ';') {  /* Bare return. */
     ins = BCINS_AD(BC_RET0, 0, 1);
   } else {  /* Return with one or more values. */
     ExpDesc e;  /* Receives the _last_ expression in the list. */
@@ -2526,44 +2505,6 @@ static void parse_return(LexState *ls)
       } else {
 	expr_tonextreg(fs, &e);  /* Force contiguous registers. */
 	ins = BCINS_AD(BC_RET, fs->nactvar, nret+1);
-      }
-    }
-  }
-  if (fs->flags & PROTO_CHILD)
-    bcemit_AJ(fs, BC_UCLO, 0, 0);  /* May need to close upvalues first. */
-  bcemit_INS(fs, ins);
-}
-
-/* Parse 'return' statement. */
-static void parse_lambda_return(LexState *ls)
-{
-  BCIns ins;
-  FuncState *fs = ls->fs;
-  lj_lex_next(ls);  /* Skip 'return'. */
-  fs->flags |= PROTO_HAS_RETURN;
-  if (parse_lambda_isend(ls->tok) || ls->tok == ';') {  /* Bare return. */
-    ins = BCINS_AD(BC_RET0, 0, 1);
-  } else {  /* Return with one or more values. */
-    ExpDesc e;  /* Receives the _last_ expression in the list. */
-    BCReg nret = expr_list(ls, &e);
-    if (nret == 1) {  /* Return one result. */
-      if (e.k == VCALL) {  /* Check for tail call. */
-        BCIns *ip = bcptr(fs, &e);
-        /* It doesn't pay off to add BC_VARGT just for 'return ...'. */
-        if (bc_op(*ip) == BC_VARG) goto notailcall;
-        fs->pc--;
-        ins = BCINS_AD(bc_op(*ip)-BC_CALL+BC_CALLT, bc_a(*ip), bc_c(*ip));
-      } else {  /* Can return the result from any register. */
-	      ins = BCINS_AD(BC_RET1, expr_toanyreg(fs, &e), 2);
-      }
-    } else {
-      if (e.k == VCALL) {  /* Append all results from a call. */
-        notailcall:
-        setbc_b(bcptr(fs, &e), 0);
-        ins = BCINS_AD(BC_RETM, fs->nactvar, e.u.s.aux - fs->nactvar);
-      } else {
-        expr_tonextreg(fs, &e);  /* Force contiguous registers. */
-        ins = BCINS_AD(BC_RET, fs->nactvar, nret+1);
       }
     }
   }
@@ -2894,7 +2835,7 @@ static int parse_stmt(LexState *ls)
     parse_local(ls);
     break;
   case TK_return:
-    parse_lambda_return(ls);
+    parse_return(ls);
     return 1;  /* Must be last. */
   case TK_continue:
     lj_lex_next(ls);
