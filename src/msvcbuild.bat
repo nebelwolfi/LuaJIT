@@ -15,7 +15,7 @@
 @setlocal
 @rem Add more debug flags here, e.g. DEBUGCFLAGS=/DLUA_USE_APICHECK /DLUAJIT_USE_SYSMALLOC
 @set DEBUGCFLAGS=
-@set LJCOMPILE=clang-cl /nologo /c /O2z /W3 /GS- /Zc:threadSafeInit- /sdl- /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline /Zi
+@set LJCOMPILE=clang-cl /nologo /bigobj /permissive- /FC /c /O2z /W3 /GF /GR- /GS- /Zc:threadSafeInit- /sdl- /D_CRT_SECURE_NO_DEPRECATE /D_CRT_STDIO_INLINE=__inline /Zi
 @set LJLINK=link /nologo
 @set LJMT=mt /nologo
 @set LJLIB=lib /nologo /nodefaultlib
@@ -88,7 +88,7 @@ buildvm -m folddef -o lj_folddef.h lj_opt_fold.c
 @if errorlevel 1 goto :BAD
 @goto :MTDLL
 :STATIC
-@set LJCOMPILE=%LJCOMPILE% /DLUA_BUILD_AS_STATIC_DLL
+@set LJCOMPILE=%LJCOMPILE% /DLUA_BUILD_AS_STATIC_DLL /Gs2147483647
 %LJCOMPILE% lj_*.c lib_*.c
 @if errorlevel 1 goto :BAD
 %LJLIB% /OUT:%LJLIBNAME% lj_*.obj lib_*.obj
