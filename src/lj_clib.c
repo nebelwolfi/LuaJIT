@@ -283,11 +283,11 @@ static void *clib_getsym(CLibrary *cl, const char *name)
 #endif
 	clib_def_handle[i] = (void *)h;
       }
-      p = (void *)GetProcAddress(h, name);
+      p = (void *)LJ_WIN_GETPROCADDR(h, name);
       if (p) break;
     }
   } else {
-    p = (void *)GetProcAddress((HINSTANCE)cl->handle, name);
+    p = (void *)LJ_WIN_GETPROCADDR((HINSTANCE)cl->handle, name);
   }
   return p;
 }

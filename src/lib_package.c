@@ -143,7 +143,7 @@ static void *ll_load(lua_State *L, const char *path, int gl)
 
 static lua_CFunction ll_sym(lua_State *L, void *lib, const char *sym)
 {
-  lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
+  lua_CFunction f = (lua_CFunction)LJ_WIN_GETPROCADDR((HINSTANCE)lib, sym);
   if (f == NULL) pusherror(L);
   return f;
 }
@@ -155,12 +155,12 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 static const char *ll_bcsym(void *lib, const char *sym)
 {
   if (lib) {
-    return (const char *)GetProcAddress((HINSTANCE)lib, sym);
+    return (const char *)LJ_WIN_GETPROCADDR((HINSTANCE)lib, sym);
   } else {
 #if LJ_TARGET_UWP
-    return (const char *)GetProcAddress((HINSTANCE)&__ImageBase, sym);
+    return (const char *)LJ_WIN_GETPROCADDR((HINSTANCE)&__ImageBase, sym);
 #else
-    HINSTANCE h = GetModuleHandleA(NULL);
+    HINSTANCE h = SusGetModuleHandleA(NULL);
     const char *p = (const char *)GetProcAddress(h, sym);
     if (p == NULL && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 					(const char *)ll_bcsym, &h))

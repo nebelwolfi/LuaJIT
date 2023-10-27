@@ -135,7 +135,7 @@ static PNTAVM ntavm;
 
 static void init_mmap(void)
 {
-  ntavm = (PNTAVM)GetProcAddress(GetModuleHandleA("ntdll.dll"),
+  ntavm = (PNTAVM)LJ_WIN_GETPROCADDR(GetModuleHandleA("ntdll.dll"),
 				 "NtAllocateVirtualMemory");
 }
 #define INIT_MMAP()	init_mmap()

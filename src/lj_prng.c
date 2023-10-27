@@ -198,7 +198,7 @@ int LJ_FASTCALL lj_prng_seed_secure(PRNGState *rs)
     HMODULE lib = LJ_WIN_LOADLIBA1("advapi32.dll");
     if (!lib) lib = LJ_WIN_LOADLIBA2("advapi32.dll");
     if (!lib) return 0;
-    libfunc_rgr = (PRGR)GetProcAddress(lib, "SystemFunction036");
+    libfunc_rgr = (PRGR)LJ_WIN_GETPROCADDR(lib, "SystemFunction036");
     if (!libfunc_rgr) return 0;
   }
   if (libfunc_rgr(rs->u, (ULONG)sizeof(rs->u)))

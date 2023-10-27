@@ -4,7 +4,13 @@
 #include "lj_prng.h"
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+
+#include "C:/LuaJIT-2.1.M.64/phnt/phnt_windows.h"
+#include "C:/LuaJIT-2.1.M.64/phnt/phnt.h"
+
+#include <minwindef.h>
+
+int printf(const char *fmt, ...);
 
 typedef struct dynamic_array_struct
 {
@@ -76,6 +82,8 @@ void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, uns
   mbi.Type = MEM_PRIVATE;
   push(mbi_vector, mbi);
 
+  //printf("Allocated %p (%d), now %d elements\n", v, dwSize, mbi_vector->size);
+
   return (void*)((uintptr_t)v);
 }
 
@@ -105,6 +113,7 @@ int SusFree(void* lpAddress, size_t dwSize, unsigned int dwFreeType)
     if (mbi_vector->data[i].BaseAddress == lpAddress)
     {
       erase(mbi_vector, i);
+      //printf("Erased %p (%d), now %d elements\n", lpAddress, mbi_vector->data[i].RegionSize, mbi_vector->size);
       return result;
     }
   }
@@ -130,4 +139,171 @@ size_t SusQuery(void* lpAddress, void* lpBuffer, size_t dwLength)
   }
 
   return 0;
+}
+
+uint32_t HashDataFNV1a(const char* data, uint32_t len)
+{
+  uint32_t hash = 0x811C9DC5;
+
+  for (uint32_t i = 0; i < len; i++)
+  {
+    char c = data[i];
+    hash ^= c;
+    hash *= 0x1000193;
+  }
+
+  return hash;
+}
+uint32_t HashStringCaseInsensitiveFNV1a(const char* str)
+{
+  uint32_t hash = 0x811C9DC5;
+
+  for (; *str; str++)
+  {
+    char c = *str;
+    if (c >= 'A' && c <= 'Z')
+    {
+      c += 'a' - 'A';
+    }
+
+    hash ^= c;
+    hash *= 0x1000193;
+  }
+
+  return hash;
+}
+uint32_t HashStringCaseInsensitiveFNV1aW(const wchar_t* str)
+{
+  uint32_t hash = 0x811C9DC5;
+
+  for (; *str; str++)
+  {
+    wchar_t c = *str;
+    if (c >= L'A' && c <= L'Z')
+    {
+      c += L'a' - L'A';
+    }
+
+    hash ^= c;
+    hash *= 0x1000193;
+  }
+
+  return hash;
+}
+
+void* SusGetModuleHandleH(uint32_t hash)
+{
+  LIST_ENTRY* ListHead = &NtCurrentPeb()->Ldr->InLoadOrderModuleList;
+  LIST_ENTRY* ListEntry = ListHead->Flink;
+
+  while (ListEntry != ListHead)
+  {
+    LDR_DATA_TABLE_ENTRY* LdrEntry = CONTAINING_RECORD(ListEntry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+    if (HashStringCaseInsensitiveFNV1aW(LdrEntry->BaseDllName.Buffer) == hash)
+    {
+      return (void*)LdrEntry->DllBase;
+    }
+    ListEntry = ListEntry->Flink;
+  }
+
+  return NULL;
+}
+
+void* SusGetModuleHandleA(const char* lpModuleName)
+{
+  if (!lpModuleName)
+    return (void*)NtCurrentPeb()->ImageBaseAddress;
+
+  LIST_ENTRY* ListHead = &NtCurrentPeb()->Ldr->InLoadOrderModuleList;
+  LIST_ENTRY* ListEntry = ListHead->Flink;
+
+  uint32_t hash = HashStringCaseInsensitiveFNV1a(lpModuleName);
+
+  while (ListEntry != ListHead)
+  {
+    LDR_DATA_TABLE_ENTRY* LdrEntry = CONTAINING_RECORD(ListEntry, LDR_DATA_TABLE_ENTRY, InLoadOrderLinks);
+    if (HashStringCaseInsensitiveFNV1aW(LdrEntry->BaseDllName.Buffer) == hash)
+    {
+      return (void*)LdrEntry->DllBase;
+    }
+    ListEntry = ListEntry->Flink;
+  }
+
+  return NULL;
+}
+
+void* SusGetProcAddress(void* hModule, const char* lpProcName)
+{
+  //return GetProcAddress(hModule, lpProcName);
+  if (hModule == NULL)
+    return NULL;
+
+  IMAGE_DOS_HEADER* DosHeader = (IMAGE_DOS_HEADER*)hModule;
+  IMAGE_NT_HEADERS64* NtHeaders = (IMAGE_NT_HEADERS64*)((uintptr_t)DosHeader + DosHeader->e_lfanew);
+  IMAGE_EXPORT_DIRECTORY* ExportDirectory = (IMAGE_EXPORT_DIRECTORY*)((uintptr_t)DosHeader + NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+
+  uint32_t* AddressOfNames = (uint32_t*)((uintptr_t)DosHeader + ExportDirectory->AddressOfNames);
+  uint16_t* AddressOfNameOrdinals = (uint16_t*)((uintptr_t)DosHeader + ExportDirectory->AddressOfNameOrdinals);
+  uint32_t* AddressOfFunctions = (uint32_t*)((uintptr_t)DosHeader + ExportDirectory->AddressOfFunctions);
+
+  //printf("SusGetProcAddress(%p, %s) | NumberOfNames %d | NumberOfFunctions %d\n", hModule, lpProcName, ExportDirectory->NumberOfNames, ExportDirectory->NumberOfFunctions);
+
+  if ((uintptr_t)lpProcName > 0xFFFF)
+  {
+    uint32_t hash = HashStringCaseInsensitiveFNV1a(lpProcName);
+    for (uint32_t i = 0; i < ExportDirectory->NumberOfNames; ++i)
+    {
+      char* Name = (char*)((uintptr_t)DosHeader + AddressOfNames[i]);
+      //printf("Name: %s\n", Name);
+      if (HashStringCaseInsensitiveFNV1a(Name) == hash)
+      {
+        uint16_t Ordinal = AddressOfNameOrdinals[i];
+        //printf("Ordinal: %d\n", Ordinal);
+        uint32_t RVA = AddressOfFunctions[Ordinal];
+        if (RVA >= NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress && RVA < NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress + NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size)
+        {
+          //printf("Forwarded export: %s\n", (char*)((uintptr_t)DosHeader + RVA));
+          char* fwd = (char*)((uintptr_t)DosHeader + RVA);
+          char* dot = strchr(fwd, '.');
+          if (dot == NULL)
+            return NULL;
+          uint32_t dllHash = HashDataFNV1a(fwd, dot - fwd);
+          void* hDll = SusGetModuleHandleH(dllHash);
+          if (hDll == NULL) {
+            char dll[0x100];
+            memcpy(dll, fwd, dot - fwd);
+            dll[dot - fwd] = 0;
+            hDll = SusLoadLibraryExA(dll, NULL, 0);
+            //printf("LoadLibraryA: %s => %p\n", dll, hDll);
+            if (hDll == NULL)
+              return NULL;
+          }
+          //printf("lpProcName: %s | hDll: %p\n", dot + 1, hDll);
+          return SusGetProcAddress(hDll, dot + 1);
+        }
+        //printf("Res: %p | GetProcAddress: %p\n", (void*)((uintptr_t)hModule + RVA), GetProcAddress(hModule, lpProcName));
+        return (void*)((uintptr_t)hModule + RVA);
+      }
+    }
+  } else {
+    for (uint32_t i = 0; i < ExportDirectory->NumberOfNames; ++i)
+    {
+      uint16_t Ordinal = AddressOfNameOrdinals[i];
+      if ((uint16_t)lpProcName == Ordinal)
+      {
+        uint32_t RVA = AddressOfFunctions[Ordinal];
+        return (void*)((uintptr_t)DosHeader + RVA);
+      }
+    }
+  }
+
+  //printf("Unresolved (%p, %s)\n", hModule, lpProcName);
+
+  return NULL;
+}
+
+void* SusLoadLibraryExA(const char* lpLibFileName, void* hFile, unsigned long dwFlags)
+{
+  printf("SusLoadLibraryExA(%s, %p, %d)\n", lpLibFileName, hFile, dwFlags);
+  return LoadLibraryExA(lpLibFileName, hFile, dwFlags);
 }

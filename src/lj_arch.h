@@ -651,9 +651,13 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, unsigned int flags);
 int SusFree(void* lpAddress, size_t dwSize, unsigned int dwFreeType);
 size_t SusQuery(void* lpAddress, void* lpBuffer, size_t dwLength);
+void* SusLoadLibraryExA(const char* lpLibFileName, void* hFile, unsigned long dwFlags);
+void* SusGetModuleHandleA(const char* lpModuleName);
+void* SusGetProcAddress(void* hModule, const char* lpProcName);
 #define LJ_WIN_VALLOC	SusAlloc
-#define LJ_WIN_LOADLIBA1(path) GetModuleHandleA((path))
-#define LJ_WIN_LOADLIBA2(path) LoadLibraryExA((path), NULL, 0)
+#define LJ_WIN_LOADLIBA1(path) SusGetModuleHandleA((path))
+#define LJ_WIN_LOADLIBA2(path) SusLoadLibraryExA((path), NULL, 0)
+#define LJ_WIN_GETPROCADDR(h, name) SusGetProcAddress((h), (name))
 #endif
 #endif
 
