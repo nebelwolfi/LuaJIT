@@ -246,7 +246,7 @@ static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
   }
   reg = ll_register(L, path);
   if (*reg == NULL) *reg = ll_load(L, path, (*name == '*'));
-  printf("ll_loadfunc %s %s %p\n", path, name, reg);
+  //printf("ll_loadfunc %s %s %p\n", path, name, reg);
   if (*reg == NULL) {
     return PACKAGE_ERR_LIB;  /* Unable to load library. */
   } else if (*name == '*') {  /* Only load library into global namespace. */

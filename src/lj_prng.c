@@ -162,6 +162,8 @@ int LJ_FASTCALL lj_prng_seed_secure(PRNGState *rs)
 
 #else
 
+int printf(const char *fmt, ...);
+
 /* Securely seed PRNG from system entropy. Returns 0 on failure. */
 int LJ_FASTCALL lj_prng_seed_secure(PRNGState *rs)
 {

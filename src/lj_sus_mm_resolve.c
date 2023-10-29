@@ -383,7 +383,7 @@ __fastcall ApiSetResolveToHost(
 		Output->Buffer = GET_API_SET_VALUE_VALUE(ApiNamespace, HostLibraryEntry);
 		Output->MaximumLength = HostLibraryEntry->ValueLength;
 		Output->Length = HostLibraryEntry->ValueLength;
-		wprintf(L"Resolved %s to %s with parent %s out of %d aliases\n", ApiToResolve->Buffer, Output->Buffer, ParentName->Buffer, ResolvedEntry->ValueCount);
+		//wprintf(L"Resolved %s to %s with parent %s out of %d aliases\n", ApiToResolve->Buffer, Output->Buffer, ParentName->Buffer, ResolvedEntry->ValueCount);
 		goto EPILOGUE;
 	}
 	

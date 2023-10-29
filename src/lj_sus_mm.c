@@ -34,9 +34,6 @@
 #include <winnt.h>
 #include <stddef.h>
 #include <tchar.h>
-#ifdef DEBUG_OUTPUT
-#include <stdio.h>
-#endif
 
 #if _MSC_VER
 // Disable warning about data -> function pointer conversion
@@ -473,7 +470,7 @@ BuildImportTable(PMEMORYMODULE module, const char* DllName)
         FARPROC *funcRef;
         HCUSTOMMODULE *tmp;
 
-        printf("import: %s | userdata %p\n", (LPCSTR) (codeBase + importDesc->Name), module->userdata);
+        printf("import: %s | userdata %p", (LPCSTR) (codeBase + importDesc->Name), module->userdata);
 
         STRING ResolvedHostLibrary = {0};
         ResolvedHostLibrary.Buffer = (char*) (codeBase + importDesc->Name);
@@ -482,7 +479,10 @@ BuildImportTable(PMEMORYMODULE module, const char* DllName)
 
         if (ResolveApiSetLibraryA((char*)(codeBase + importDesc->Name), &ResolvedHostLibrary, &DllNameStr))
         {
-            printf("BuildImportTable|ResolvedHostLibrary: %s\n", ResolvedHostLibrary.Buffer);
+            printf(" | host: %s\n", ResolvedHostLibrary.Buffer);
+        } else
+        {
+            printf("\n");
         }
         
         HCUSTOMMODULE handle = module->getModuleHandle(module->userdata, ResolvedHostLibrary.Buffer);
@@ -625,21 +625,14 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     // reserve memory for image of library
     // XXX: is it correct to commit the complete memory region at once?
     //      calling DllEntry raises an exception if we don't...
-    code = (unsigned char *)allocMemory((LPVOID)(old_header->OptionalHeader.ImageBase),
+    // try to allocate memory at arbitrary position
+    code = (unsigned char *)allocMemory(NULL,
         alignedImageSize,
         MEM_RESERVE | MEM_COMMIT,
         PAGE_READWRITE);
-
     if (code == NULL) {
-        // try to allocate memory at arbitrary position
-        code = (unsigned char *)allocMemory(NULL,
-            alignedImageSize,
-            MEM_RESERVE | MEM_COMMIT,
-            PAGE_READWRITE);
-        if (code == NULL) {
-            SetLastError(ERROR_OUTOFMEMORY);
-            return NULL;
-        }
+        SetLastError(ERROR_OUTOFMEMORY);
+        return NULL;
     }
 
 #ifdef _WIN64
@@ -737,6 +730,17 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     // TLS callbacks are executed BEFORE the main loading
     if (!ExecuteTLS(result)) {
         goto error;
+    }
+
+    // RtlAddFunctionTable?
+    if (result->headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size > 0) {
+        //printf("Exception table found\n");
+        // XXX: implement
+        RtlAddFunctionTable((PRUNTIME_FUNCTION)((uintptr_t)result->codeBase +
+            result->headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress),
+            result->headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size /
+            sizeof(RUNTIME_FUNCTION),
+            (DWORD64)result->codeBase);
     }
 
     // get entry point of loaded library
