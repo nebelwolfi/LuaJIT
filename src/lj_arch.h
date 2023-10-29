@@ -656,7 +656,7 @@ void* SusGetModuleHandleA(void *L, const char* lpModuleName);
 void* SusGetProcAddress(void *L, void* hModule, const char* lpProcName);
 #define LJ_WIN_VALLOC	SusAlloc
 #define LJ_WIN_LOADLIBA1(L, path) SusGetModuleHandleA(L, (path))
-#define LJ_WIN_LOADLIBA2(L, path) SusLoadLibraryExA(L, (path), NULL, 0)
+#define LJ_WIN_LOADLIBA2(L, path) LoadLibraryExA((path), NULL, 0)
 #define LJ_WIN_GETPROCADDR(L, h, name) SusGetProcAddress(L, (h), (name))
 #endif
 #endif
