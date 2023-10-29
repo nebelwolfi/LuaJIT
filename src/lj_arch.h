@@ -648,16 +648,16 @@
 #define LJ_WIN_VALLOC	VirtualAllocFromApp
 extern void *LJ_WIN_LOADLIBA(const char *path);
 #else
-void* SusAlloc(void* you_wish, size_t dwSize, unsigned int flAllocationType, unsigned int flags);
-int SusFree(void* lpAddress, size_t dwSize, unsigned int dwFreeType);
+void* SusAlloc(void* you_wish, size_t dwSize, unsigned long flAllocationType, unsigned long flags);
+int SusFree(void* lpAddress, size_t dwSize, unsigned long dwFreeType);
 size_t SusQuery(void* lpAddress, void* lpBuffer, size_t dwLength);
-void* SusLoadLibraryExA(const char* lpLibFileName, void* hFile, unsigned long dwFlags);
-void* SusGetModuleHandleA(const char* lpModuleName);
-void* SusGetProcAddress(void* hModule, const char* lpProcName);
+void* SusLoadLibraryExA(lua_State *L, const char* lpLibFileName, void* hFile, unsigned long dwFlags);
+void* SusGetModuleHandleA(void *L, const char* lpModuleName);
+void* SusGetProcAddress(void *L, void* hModule, const char* lpProcName);
 #define LJ_WIN_VALLOC	SusAlloc
-#define LJ_WIN_LOADLIBA1(path) SusGetModuleHandleA((path))
-#define LJ_WIN_LOADLIBA2(path) SusLoadLibraryExA((path), NULL, 0)
-#define LJ_WIN_GETPROCADDR(h, name) SusGetProcAddress((h), (name))
+#define LJ_WIN_LOADLIBA1(L, path) SusGetModuleHandleA(L, (path))
+#define LJ_WIN_LOADLIBA2(L, path) SusLoadLibraryExA(L, (path), NULL, 0)
+#define LJ_WIN_GETPROCADDR(L, h, name) SusGetProcAddress(L, (h), (name))
 #endif
 #endif
 

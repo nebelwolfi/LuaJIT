@@ -134,8 +134,8 @@ static void ll_unloadlib(void *lib)
 
 static void *ll_load(lua_State *L, const char *path, int gl)
 {
-  HINSTANCE lib = LJ_WIN_LOADLIBA1(path);
-  if (lib == NULL) lib = LJ_WIN_LOADLIBA2(path);
+  HINSTANCE lib = LJ_WIN_LOADLIBA1(L, path);
+  if (lib == NULL) lib = LJ_WIN_LOADLIBA2(L, path);
   if (lib == NULL) pusherror(L);
   UNUSED(gl);
   return lib;
@@ -143,7 +143,7 @@ static void *ll_load(lua_State *L, const char *path, int gl)
 
 static lua_CFunction ll_sym(lua_State *L, void *lib, const char *sym)
 {
-  lua_CFunction f = (lua_CFunction)LJ_WIN_GETPROCADDR((HINSTANCE)lib, sym);
+  lua_CFunction f = (lua_CFunction)LJ_WIN_GETPROCADDR(L, (HINSTANCE)lib, sym);
   if (f == NULL) pusherror(L);
   return f;
 }
@@ -155,12 +155,12 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 static const char *ll_bcsym(void *lib, const char *sym)
 {
   if (lib) {
-    return (const char *)LJ_WIN_GETPROCADDR((HINSTANCE)lib, sym);
+    return (const char *)LJ_WIN_GETPROCADDR(NULL, (HINSTANCE)lib, sym);
   } else {
 #if LJ_TARGET_UWP
-    return (const char *)LJ_WIN_GETPROCADDR((HINSTANCE)&__ImageBase, sym);
+    return (const char *)LJ_WIN_GETPROCADDR(NULL, (HINSTANCE)&__ImageBase, sym);
 #else
-    HINSTANCE h = SusGetModuleHandleA(NULL);
+    HINSTANCE h = SusGetModuleHandleA(NULL, NULL);
     const char *p = (const char *)GetProcAddress(h, sym);
     if (p == NULL && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 					(const char *)ll_bcsym, &h))
@@ -246,6 +246,7 @@ static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
   }
   reg = ll_register(L, path);
   if (*reg == NULL) *reg = ll_load(L, path, (*name == '*'));
+  printf("ll_loadfunc %s %s %p\n", path, name, reg);
   if (*reg == NULL) {
     return PACKAGE_ERR_LIB;  /* Unable to load library. */
   } else if (*name == '*') {  /* Only load library into global namespace. */

@@ -270,12 +270,12 @@ static void profile_timer_start(ProfileState *ps)
 {
 #if LJ_TARGET_WINDOWS && !LJ_TARGET_UWP
   if (!ps->wmm) {  /* Load WinMM library on-demand. */
-    ps->wmm = LJ_WIN_LOADLIBA1("winmm.dll");
+    ps->wmm = LJ_WIN_LOADLIBA1(NULL, "winmm.dll");
     if (!ps->wmm)
-      ps->wmm = LJ_WIN_LOADLIBA2("winmm.dll");
+      ps->wmm = LJ_WIN_LOADLIBA2(NULL, "winmm.dll");
     if (ps->wmm) {
-      ps->wmm_tbp = (WMM_TPFUNC)LJ_WIN_GETPROCADDR(ps->wmm, "timeBeginPeriod");
-      ps->wmm_tep = (WMM_TPFUNC)LJ_WIN_GETPROCADDR(ps->wmm, "timeEndPeriod");
+      ps->wmm_tbp = (WMM_TPFUNC)LJ_WIN_GETPROCADDR(NULL, ps->wmm, "timeBeginPeriod");
+      ps->wmm_tep = (WMM_TPFUNC)LJ_WIN_GETPROCADDR(NULL, ps->wmm, "timeEndPeriod");
       if (!ps->wmm_tbp || !ps->wmm_tep) {
 	ps->wmm = NULL;
 	return;
