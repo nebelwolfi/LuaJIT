@@ -134,6 +134,7 @@ static void ll_unloadlib(void *lib)
 
 static void *ll_load(lua_State *L, const char *path, int gl)
 {
+  //printf("ll_load %s %d\n", path, gl);
   HINSTANCE lib = LJ_WIN_LOADLIBA1(L, path);
   if (lib == NULL) lib = LJ_WIN_LOADLIBA2(L, path);
   if (lib == NULL) pusherror(L);
@@ -254,6 +255,7 @@ static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
     return 0;
   } else {
     const char *sym = r ? name : mksymname(L, name, SYMPREFIX_CF);
+    //printf("ll_loadfunc %s %s %p %s\n", path, name, reg, sym);
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f) {
       lua_pushcfunction(L, f);
@@ -263,9 +265,9 @@ static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
       const char *bcdata = ll_bcsym(*reg, mksymname(L, name, SYMPREFIX_BC));
       lua_pop(L, 1);
       if (bcdata) {
-	if (luaL_loadbuffer(L, bcdata, ~(size_t)0, name) != 0)
-	  return PACKAGE_ERR_LOAD;
-	return 0;
+        if (luaL_loadbuffer(L, bcdata, ~(size_t)0, name) != 0)
+          return PACKAGE_ERR_LOAD;
+        return 0;
       }
     }
     return PACKAGE_ERR_FUNC;  /* Unable to find function. */
@@ -376,6 +378,7 @@ static int lj_cf_package_loader_lua(lua_State *L)
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path");
   if (filename == NULL) return 1;  /* library not found in this path */
+  //printf("lj_cf_package_loader_lua %s %s\n", name, filename);
   if (luaL_loadfile(L, filename) != 0)
     loaderror(L, filename);
   return 1;  /* library loaded successfully */
@@ -386,6 +389,7 @@ static int lj_cf_package_loader_c(lua_State *L)
   const char *name = luaL_checkstring(L, 1);
   const char *filename = findfile(L, name, "cpath");
   if (filename == NULL) return 1;  /* library not found in this path */
+  //printf("lj_cf_package_loader_c %s %s\n", name, filename);
   if (ll_loadfunc(L, filename, name, 0) != 0)
     loaderror(L, filename);
   return 1;  /* library loaded successfully */
@@ -401,6 +405,7 @@ static int lj_cf_package_loader_croot(lua_State *L)
   lua_pushlstring(L, name, (size_t)(p - name));
   filename = findfile(L, lua_tostring(L, -1), "cpath");
   if (filename == NULL) return 1;  /* root not found */
+  //printf("lj_cf_package_loader_croot %s %s\n", name, filename);
   if ((st = ll_loadfunc(L, filename, name, 0)) != 0) {
     if (st != PACKAGE_ERR_FUNC) loaderror(L, filename);  /* real error */
     lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,

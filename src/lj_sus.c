@@ -333,3 +333,126 @@ void* SusGetProcAddress(void *L, void* hModule, const char* lpProcName)
   
   return funcAddress;
 }
+
+void* SusLoadLibraryExA(lua_State *L, const char* lpLibFileName, void* hFile, unsigned long dwFlags)
+{
+  if (!lpLibFileName)
+    return NULL;
+
+  //printf("SusLoadLibraryExA: %s\n", lpLibFileName);
+
+  BOOL bFileHandleOwned = !!hFile;
+
+  //return LoadLibraryExA(lpLibFileName, hFile, dwFlags);
+  if (!hFile)
+    hFile = CreateFileA(lpLibFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE){
+    //printf("Invalid handle value\n");
+    return NULL;
+  }
+
+  HANDLE hFileMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY | SEC_IMAGE, 0, 0, NULL);
+  if (!hFileMapping) {
+    //printf("Invalid file mapping\n");
+    if (bFileHandleOwned) CloseHandle(hFile);
+    return NULL;
+  }
+
+  void* file_mapping_view = MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
+  if (!file_mapping_view) {
+    //printf("Invalid file mapping view\n");
+    CloseHandle(hFileMapping);
+    if (bFileHandleOwned) CloseHandle(hFile);
+    return NULL;
+  }
+
+  IMAGE_DOS_HEADER* dos_header = (IMAGE_DOS_HEADER*)file_mapping_view;
+  IMAGE_NT_HEADERS64* nt_headers = (IMAGE_NT_HEADERS64*)((uintptr_t)dos_header + dos_header->e_lfanew);
+  IMAGE_OPTIONAL_HEADER64* optional_header = &nt_headers->OptionalHeader;
+  IMAGE_FILE_HEADER* file_header = &nt_headers->FileHeader;
+  DWORD image_size = optional_header->SizeOfImage;
+  void* image_base = SusAlloc((void*)optional_header->ImageBase, image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  if (!image_base)
+    image_base = SusAlloc(NULL, image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  if (!image_base) {
+    //printf("Invalid image base\n");
+    UnmapViewOfFile(file_mapping_view);
+    CloseHandle(hFileMapping);
+    if (bFileHandleOwned) CloseHandle(hFile);
+    return NULL;
+  }
+  memcpy(image_base, file_mapping_view, optional_header->SizeOfHeaders);
+  IMAGE_SECTION_HEADER* pSectionHeader = IMAGE_FIRST_SECTION(nt_headers);
+  for (UINT i = 0; i < file_header->NumberOfSections; ++i, ++pSectionHeader)
+    if (pSectionHeader->SizeOfRawData)
+      memcpy((void *)((uintptr_t) image_base + pSectionHeader->VirtualAddress),
+            (const void *)((uintptr_t) file_mapping_view + pSectionHeader->PointerToRawData),
+            pSectionHeader->SizeOfRawData);
+  //printf("Image base: %p vs %p\n", (uintptr_t)image_base, (uintptr_t)optional_header->ImageBase);
+  ptrdiff_t delta = (ptrdiff_t)((uintptr_t)image_base - (uintptr_t)optional_header->ImageBase);
+  //printf("Delta: %p\n", delta);
+  if (delta && optional_header->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size) {
+    PIMAGE_BASE_RELOCATION reloc_data = (IMAGE_BASE_RELOCATION*)((uintptr_t)image_base + optional_header->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+    while (reloc_data->VirtualAddress)
+    {
+      WORD * pRelativeInfo = (WORD*)((uintptr_t)reloc_data + sizeof(IMAGE_BASE_RELOCATION));
+      DWORD nEntries = (reloc_data->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+      //printf("pRelativeInfo %p | block size %d\n", pRelativeInfo, nEntries);
+      for (UINT i = 0; i < nEntries; ++i, ++pRelativeInfo)
+      {
+        int type = *pRelativeInfo >> 12;
+        if (type == IMAGE_REL_BASED_DIR64)
+        {
+          UINT_PTR* pPatch = (UINT_PTR*)((uintptr_t)image_base + reloc_data->VirtualAddress + ((*pRelativeInfo) & 0xFFF));
+          *pPatch += delta;
+        } else if (type == IMAGE_REL_BASED_HIGHLOW) {
+          UINT* pPatch = (UINT*)((uintptr_t)image_base + reloc_data->VirtualAddress + ((*pRelativeInfo) & 0xFFF));
+          *pPatch += (UINT)delta;
+        }
+      }
+      //printf("Done relocating with %p\n", reloc_data);
+      reloc_data = (IMAGE_BASE_RELOCATION*)((UINT_PTR)(reloc_data) + reloc_data->SizeOfBlock);
+      //printf("Now relocating with %p\n", reloc_data);
+    }
+  }
+  //printf("Relocated\n");
+  if (optional_header->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size)
+  {
+    IMAGE_IMPORT_DESCRIPTOR* import_descriptor = (IMAGE_IMPORT_DESCRIPTOR*)((uintptr_t)image_base + optional_header->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+    while (import_descriptor->Name)
+    {
+      const char* module_name = (const char*)((uintptr_t)image_base + import_descriptor->Name);
+      uint32_t dllNameHash = HashStringCaseInsensitiveFNV1a(module_name);
+      void* hDll = SusGetModuleHandleH(dllNameHash);
+
+      ULONG_PTR * pThunkRef = (ULONG_PTR*)((uintptr_t)image_base + import_descriptor->OriginalFirstThunk);
+      ULONG_PTR * pFuncRef = (ULONG_PTR*)((uintptr_t)image_base + import_descriptor->FirstThunk);
+
+      if (!import_descriptor->OriginalFirstThunk)
+      {
+        pThunkRef = pFuncRef;
+      }
+
+      for (; *pThunkRef; pThunkRef++, pFuncRef++)
+      {
+        if (IMAGE_SNAP_BY_ORDINAL(*pThunkRef))
+        {
+          //printf("Importing %s!%d\n", module_name, *pThunkRef & 0xFFFF);
+          *pFuncRef = (ULONG_PTR)SusGetProcAddress(L, hDll, (const char*)(uint16_t)(*pThunkRef & 0xFFFF));
+        }
+        else
+        {
+          IMAGE_IMPORT_BY_NAME* import_by_name = (IMAGE_IMPORT_BY_NAME*)((uintptr_t)image_base + *pThunkRef);
+          //printf("Importing %s!%s\n", module_name, import_by_name->Name);
+          *pFuncRef = (ULONG_PTR)SusGetProcAddress(L, hDll, (const char*)import_by_name->Name);
+        }
+      }
+
+      import_descriptor++;
+    }
+  }
+  //printf("Imported\n");
+  
+
+  return 0;
+}

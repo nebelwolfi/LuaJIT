@@ -486,13 +486,13 @@ static int str_find_aux(lua_State *L, int find)
       ms.level = ms.depth = 0;
       q = match(&ms, sstr, pstr);
       if (q) {
-	if (find) {
-	  setintV(L->top++, (int32_t)(sstr-(strdata(s)-1)));
-	  setintV(L->top++, (int32_t)(q-strdata(s)));
-	  return push_captures(&ms, NULL, NULL) + 2;
-	} else {
-	  return push_captures(&ms, sstr, q);
-	}
+        if (find) {
+          setintV(L->top++, (int32_t)(sstr-(strdata(s)-1)));
+          setintV(L->top++, (int32_t)(q-strdata(s)));
+          return push_captures(&ms, NULL, NULL) + 2;
+        } else {
+          return push_captures(&ms, sstr, q);
+        }
       }
     } while (sstr++ < ms.src_end && !anchor);
   }
