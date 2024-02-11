@@ -238,7 +238,7 @@ static const char *mksymname(lua_State *L, const char *modname,
   return funcname;
 }
 
-static int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
+LUALIB_API int ll_loadfunc(lua_State *L, const char *path, const char *name, int r)
 {
   void **reg;
   if (strlen(path) >= 4096) {
