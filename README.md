@@ -20,7 +20,7 @@
 - Windows Patch for UTF16 File Names
 - Self Iterating Objects ``` for thing in table do ```
 
-Only x86 will work
+x86/x64 supported
 
 ### [My C++ Lua Binding](https://github.com/nebelwolfi/GenericLuaBinding)
 
