@@ -195,9 +195,9 @@ static int CALL_MUNMAP(void *ptr, size_t size)
   char *cptr = (char *)ptr;
   while (size) {
     if (SusQuery(cptr, &minfo, sizeof(minfo)) == 0)
-      return -1;
+      return -3;
     if (minfo.BaseAddress != cptr || minfo.AllocationBase != cptr || !(minfo.State & MEM_COMMIT) || minfo.RegionSize > size)
-      return -1;
+      return -2;
     if (SusFree(cptr, 0, MEM_RELEASE) == 0)
       return -1;
     cptr += minfo.RegionSize;
@@ -1261,6 +1261,7 @@ void lj_alloc_destroy(void *msp)
     size_t size = sp->size;
     sp = sp->next;
     CALL_MUNMAP(base, size);
+//    printf("lj_alloc_destroy: munmap(%p, %lld) => %d\n", base, size, CALL_MUNMAP(base, size));
   }
 }
 

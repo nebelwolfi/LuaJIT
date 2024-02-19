@@ -5,8 +5,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 
-#include "C:/LuaJIT-2.1.M.64/phnt/phnt_windows.h"
-#include "C:/LuaJIT-2.1.M.64/phnt/phnt.h"
+#include "../phnt/phnt_windows.h"
+#include "../phnt/phnt.h"
 
 #include <minwindef.h>
 
@@ -27,45 +27,48 @@ typedef struct POINTER_LIST {
 
 typedef struct dynamic_array_struct
 {
-  void** data;
+  MEMORY_BASIC_INFORMATION* data;
   size_t capacity; /* total capacity */
   size_t size; /* number of elements in vector */
-} PVOID_VECTOR;
-PVOID_VECTOR* mbi_vector = NULL;
+} MBI_VECTOR;
+MBI_VECTOR* mbi_vector = NULL;
+CRITICAL_SECTION CriticalSection;
 
-PVOID_VECTOR* init_vector()
+void init_vector()
 {
-  PVOID_VECTOR* vector = (PVOID_VECTOR*)malloc(sizeof(PVOID_VECTOR));
-  vector->capacity = 0;
-  vector->size = 0;
-  vector->data = NULL;
+  InitializeCriticalSection(&CriticalSection);
+  EnterCriticalSection(&CriticalSection);
+  mbi_vector = (MBI_VECTOR*)malloc(sizeof(MBI_VECTOR));
+  mbi_vector->capacity = 0;
+  mbi_vector->size = 0;
+  mbi_vector->data = NULL;
   ////printf("Allocated vector\n");
-  return vector;
+  LeaveCriticalSection(&CriticalSection);
 }
 
-void push(PVOID_VECTOR* vector, void* element)
+void push(MBI_VECTOR* vector, MEMORY_BASIC_INFORMATION* value)
 {
   if (vector->capacity == 0)
   {
-    vector->capacity = 1;
-    vector->data = (void**)malloc(sizeof(void*));
+    vector->capacity = 1000;
+    vector->data = (MEMORY_BASIC_INFORMATION*)malloc(vector->capacity * sizeof(MEMORY_BASIC_INFORMATION));
   }
   else if (vector->capacity == vector->size)
   {
     vector->capacity *= 2;
-    vector->data = (void**)realloc(vector->data, vector->capacity * sizeof(void*));
+    MEMORY_BASIC_INFORMATION* new_data = (MEMORY_BASIC_INFORMATION*)realloc(vector->data, vector->capacity * sizeof(MEMORY_BASIC_INFORMATION));
+    if (new_data == NULL)
+    {
+      free(vector->data);
+      vector->data = (MEMORY_BASIC_INFORMATION*)malloc(vector->capacity * sizeof(MEMORY_BASIC_INFORMATION));
+    } else {
+      vector->data = new_data;
+    }
   }
-  vector->data[vector->size++] = element;
+  memcpy(vector->data + vector->size++, value, sizeof(MEMORY_BASIC_INFORMATION));
 }
 
-void pop(PVOID_VECTOR* vector)
-{
-  if (vector->size == 0)
-    return;
-  --vector->size;
-}
-
-void erase(PVOID_VECTOR* vector, size_t index)
+void erase(MBI_VECTOR* vector, size_t index)
 {
   if (index >= vector->size)
     return;
@@ -78,8 +81,13 @@ void* SusAlloc(void* you_wish, size_t dwSize, unsigned long flAllocationType, un
 {
   ////printf("SusAlloc\n");
   void* v = VirtualAlloc(you_wish, dwSize, flAllocationType, flags); //  + 0x100
-  if (v == NULL)
-    return NULL;
+  if (v == NULL) {
+    v = VirtualAlloc(NULL, dwSize, flAllocationType, flags);
+    if (v == NULL) {
+      //printf("Failed to allocate %d bytes\n", dwSize);
+      return NULL;
+    }
+  }
 
   //unsigned int SuperJunk = 0xDEADC0DE;
   //for (unsigned int i = 0; i < 0x50 / sizeof(unsigned int); ++i)
@@ -92,20 +100,22 @@ void* SusAlloc(void* you_wish, size_t dwSize, unsigned long flAllocationType, un
   ////printf("Allocating 1\n");
 
   if (mbi_vector == NULL)
-    mbi_vector = init_vector();
+    init_vector();
   ////printf("Allocating 2\n");
 
-  PMEMORY_BASIC_INFORMATION mbi = (PMEMORY_BASIC_INFORMATION)malloc(sizeof(MEMORY_BASIC_INFORMATION));
-  mbi->BaseAddress = v;
-  mbi->AllocationBase = v;
-  mbi->AllocationProtect = flAllocationType;
-  mbi->RegionSize = dwSize;
-  mbi->State = MEM_COMMIT;
-  mbi->Protect = flAllocationType;
-  mbi->Type = MEM_PRIVATE;
-  push(mbi_vector, mbi);
-
-  ////printf("Allocated %p (%d), now %d elements\n", v, dwSize, mbi_vector->size);
+  MEMORY_BASIC_INFORMATION mbi = { 0 };
+  mbi.BaseAddress = v;
+  mbi.AllocationBase = v;
+  mbi.AllocationProtect = flags;
+  mbi.RegionSize = dwSize;
+  mbi.State = flAllocationType;
+  mbi.Protect = flags;
+  mbi.Type = MEM_PRIVATE;
+  mbi.PartitionId = 0;
+  EnterCriticalSection(&CriticalSection);
+  push(mbi_vector, &mbi);
+  LeaveCriticalSection(&CriticalSection);
+  //printf("Allocated %p (%llx), now %lld elements\n", v, dwSize, mbi_vector->size);
 
   return (void*)((uintptr_t)v);
 }
@@ -132,15 +142,21 @@ int SusFree(void* lpAddress, size_t dwSize, unsigned long dwFreeType)
   if (mbi_vector == NULL || result == 0)
     return result;
 
+  EnterCriticalSection(&CriticalSection);
   for (size_t i = 0; i < mbi_vector->size; ++i)
   {
-    if (((PMEMORY_BASIC_INFORMATION)mbi_vector->data[i])->BaseAddress == lpAddress)
+    if (mbi_vector->data[i].BaseAddress == lpAddress)
     {
+      //printf("Erased %p (%llX) (%lld elements) => ", lpAddress, mbi_vector->data[i].RegionSize, mbi_vector->size);
       erase(mbi_vector, i);
-      ////printf("Erased %p (%d), now %d elements\n", lpAddress, ((PMEMORY_BASIC_INFORMATION)mbi_vector->data[i])->RegionSize, mbi_vector->size);
+      //printf("%lld elements\n", mbi_vector->size);
+      LeaveCriticalSection(&CriticalSection);
       return result;
     }
   }
+  LeaveCriticalSection(&CriticalSection);
+
+  //printf("Trying to free %p (%llX) but it's not in the vector\n", lpAddress, dwSize);
 
   return result;
 }
@@ -154,14 +170,20 @@ size_t SusQuery(void* lpAddress, void* lpBuffer, size_t dwLength)
   if (mbi_vector == NULL)
     return 0;
 
+  EnterCriticalSection(&CriticalSection);
   for (size_t i = 0; i < mbi_vector->size; ++i)
   {
-    if (((PMEMORY_BASIC_INFORMATION)mbi_vector->data[i])->State == lpAddress)
+    if (mbi_vector->data[i].BaseAddress == lpAddress)
     {
-      *(PMEMORY_BASIC_INFORMATION)lpBuffer = *((PMEMORY_BASIC_INFORMATION)mbi_vector->data[i]);
+      //printf("Queried %p | %p | %llx\n", lpAddress, mbi_vector->data[i].BaseAddress, mbi_vector->data[i].RegionSize);
+      memcpy(lpBuffer, mbi_vector->data + i, dwLength);
+      LeaveCriticalSection(&CriticalSection);
       return sizeof(MEMORY_BASIC_INFORMATION);
     }
   }
+  LeaveCriticalSection(&CriticalSection);
+
+  //printf("Trying to query %p but it's not in the vector\n", lpAddress);
 
   return 0;
 }
