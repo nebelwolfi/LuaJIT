@@ -115,9 +115,30 @@ void* SusAlloc(void* you_wish, size_t dwSize, unsigned long flAllocationType, un
   EnterCriticalSection(&CriticalSection);
   push(mbi_vector, &mbi);
   LeaveCriticalSection(&CriticalSection);
-  //printf("Allocated %p (%llx), now %lld elements\n", v, dwSize, mbi_vector->size);
+
+  //{
+  //  size_t total = 0;
+  //  EnterCriticalSection(&CriticalSection);
+  //  for (size_t i = 0; i < mbi_vector->size; ++i)
+  //    total += mbi_vector->data[i].RegionSize;
+  //  LeaveCriticalSection(&CriticalSection);
+  //  printf("Allocated %p (%llx), now %lld elements using %lld bytes\n", v, dwSize, mbi_vector->size, total);
+  //}
 
   return (void*)((uintptr_t)v);
+}
+
+size_t SusCount()
+{
+  ////printf("SusCount\n");
+  if (mbi_vector == NULL)
+    return 0;
+  size_t total = 0;
+  EnterCriticalSection(&CriticalSection);
+  for (size_t i = 0; i < mbi_vector->size; ++i)
+    total += mbi_vector->data[i].RegionSize;
+  LeaveCriticalSection(&CriticalSection);
+  return total;
 }
 
 int SusFree(void* lpAddress, size_t dwSize, unsigned long dwFreeType)

@@ -711,6 +711,15 @@ LJLIB_CF(ffi_copy)	LJLIB_REC(.)
   return 0;
 }
 
+LJLIB_CF(ffi_move)  LJLIB_REC(.)
+{
+  void *dp = ffi_checkptr(L, 1, CTID_P_VOID);
+  void *sp = ffi_checkptr(L, 2, CTID_P_VOID);
+  CTSize len = (CTSize)ffi_checkint(L, 3);
+  memmove(dp, sp, len);
+  return 0;
+}
+
 LJLIB_CF(ffi_fill)	LJLIB_REC(.)
 {
   void *dp = ffi_checkptr(L, 1, CTID_P_VOID);
@@ -811,6 +820,13 @@ LJLIB_CF(ffi_load)
   GCstr *name = lj_lib_checkstr(L, 1);
   int global = (L->base+1 < L->top && tvistruecond(L->base+1));
   lj_clib_load(L, tabref(curr_func(L)->c.env), name, global);
+  return 1;
+}
+
+size_t SusCount();
+LJLIB_CF(ffi_count)
+{
+  lua_pushinteger(L, SusCount());
   return 1;
 }
 

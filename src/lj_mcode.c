@@ -76,7 +76,7 @@ static void *mcode_alloc_at(jit_State *J, uintptr_t hint, size_t sz, DWORD prot)
 static void mcode_free(jit_State *J, void *p, size_t sz)
 {
   UNUSED(J); UNUSED(sz);
-  SusFree(p, 0, MEM_RELEASE);
+  LJ_WIN_FREE(p, 0, MEM_RELEASE);
 }
 
 static int mcode_setprot(void *p, size_t sz, DWORD prot)
@@ -224,9 +224,8 @@ static void *mcode_alloc(jit_State *J, size_t sz)
     if (mcode_validptr(hint)) {
       void *p = mcode_alloc_at(J, hint, sz, MCPROT_GEN);
 
-      if (mcode_validptr(p) &&
-	  ((uintptr_t)p + sz - target < range || target - (uintptr_t)p < range))
-	return p;
+      if (mcode_validptr(p) && ((uintptr_t)p + sz - target < range || target - (uintptr_t)p < range))
+        return p;
       if (p) mcode_free(J, p, sz);  /* Free badly placed area. */
     }
     /* Next try probing 64K-aligned pseudo-random addresses. */

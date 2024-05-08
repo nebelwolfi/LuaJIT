@@ -1275,8 +1275,8 @@ LUA_API int lua_gc(lua_State *L, int what, int data)
     g->gc.threshold = (a <= g->gc.total) ? (g->gc.total - a) : 0;
     while (g->gc.total >= g->gc.threshold)
       if (lj_gc_step(L) > 0) {
-	res = 1;
-	break;
+        res = 1;
+        break;
       }
     break;
   }

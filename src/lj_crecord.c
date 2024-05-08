@@ -1676,6 +1676,24 @@ void LJ_FASTCALL recff_ffi_copy(jit_State *J, RecordFFData *rd)
   }  /* else: interpreter will throw. */
 }
 
+void LJ_FASTCALL recff_ffi_move(jit_State *J, RecordFFData *rd)
+{
+  CTState *cts = ctype_ctsG(J2G(J));
+  TRef trdst = J->base[0], trsrc = J->base[1], trlen = J->base[2];
+  if (trdst && trsrc && (trlen || tref_isstr(trsrc))) {
+    trdst = crec_ct_tv(J, ctype_get(cts, CTID_P_VOID), 0, trdst, &rd->argv[0]);
+    trsrc = crec_ct_tv(J, ctype_get(cts, CTID_P_VOID), 0, trsrc, &rd->argv[1]);
+    if (trlen) {
+      trlen = crec_toint(J, cts, trlen, &rd->argv[2]);
+    } else {
+      trlen = emitir(IRTI(IR_FLOAD), J->base[1], IRFL_STR_LEN);
+      trlen = emitir(IRTI(IR_ADD), trlen, lj_ir_kint(J, 1));
+    }
+    rd->nres = 0;
+    crec_copy(J, trdst, trsrc, trlen, NULL);
+  }  /* else: interpreter will throw. */
+}
+
 void LJ_FASTCALL recff_ffi_fill(jit_State *J, RecordFFData *rd)
 {
   CTState *cts = ctype_ctsG(J2G(J));

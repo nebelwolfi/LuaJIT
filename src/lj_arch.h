@@ -576,17 +576,13 @@
 #if defined(LUAJIT_DISABLE_PROFILE)
 #define LJ_HASPROFILE		0
 #elif LJ_TARGET_POSIX
-#define LJ_HASPROFILE		0
+#define LJ_HASPROFILE		1
 #define LJ_PROFILE_SIGPROF	1
 #elif LJ_TARGET_PS3
-#define LJ_HASPROFILE		0
+#define LJ_HASPROFILE		1
 #define LJ_PROFILE_PTHREAD	1
 #elif LJ_TARGET_WINDOWS || LJ_TARGET_XBOX360
-#ifndef LUA_BUILD_AS_STATIC_DLL
-#define LJ_HASPROFILE		0
-#else
-#define LJ_HASPROFILE		0
-#endif
+#define LJ_HASPROFILE		1
 #define LJ_PROFILE_WTHREAD	1
 #else
 #define LJ_HASPROFILE		0
@@ -656,8 +652,17 @@ void* SusGetModuleHandleA(void *L, const char* lpModuleName);
 void* SusGetProcAddress(void *L, void* hModule, const char* lpProcName);
 #define LJ_WIN_VALLOC	SusAlloc
 #define LJ_WIN_LOADLIBA1(L, path) SusGetModuleHandleA(L, (path))
-#define LJ_WIN_LOADLIBA2(L, path) LoadLibraryExA((path), NULL, 0)
+#define LJ_WIN_LOADLIBA2(L, path) LoadLibraryExA((path), NULL, LOAD_LIBRARY_SEARCH_USER_DIRS | LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)
 #define LJ_WIN_GETPROCADDR(L, h, name) SusGetProcAddress(L, (h), (name))
+#define LJ_WIN_QUERY(lpAddress, lpBuffer, dwLength) SusQuery((lpAddress), (lpBuffer), (dwLength))
+#define LJ_WIN_FREE(lpAddress, dwSize, dwFreeType) SusFree((lpAddress), (dwSize), (dwFreeType))
+//#define LJ_WIN_VALLOC	VirtualAlloc
+//#define LJ_WIN_VPROTECT	VirtualProtect
+//#define LJ_WIN_LOADLIBA1(L, path)	GetModuleHandleA((path))
+//#define LJ_WIN_LOADLIBA2(L, path)	LoadLibraryExA((path), NULL, 0)
+//#define LJ_WIN_GETPROCADDR(L, h, name)	GetProcAddress((h), (name))
+//#define LJ_WIN_QUERY(lpAddress, lpBuffer, dwLength) VirtualQuery((lpAddress), (lpBuffer), (dwLength))
+//#define LJ_WIN_FREE(lpAddress, dwSize, dwFreeType) VirtualFree((lpAddress), (dwSize), (dwFreeType))
 #endif
 #endif
 

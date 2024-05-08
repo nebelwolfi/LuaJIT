@@ -161,7 +161,7 @@ static const char *ll_bcsym(void *lib, const char *sym)
 #if LJ_TARGET_UWP
     return (const char *)LJ_WIN_GETPROCADDR(NULL, (HINSTANCE)&__ImageBase, sym);
 #else
-    HINSTANCE h = SusGetModuleHandleA(NULL, NULL);
+    HINSTANCE h = LJ_WIN_LOADLIBA1(NULL, NULL);
     const char *p = (const char *)GetProcAddress(h, sym);
     if (p == NULL && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 					(const char *)ll_bcsym, &h))
