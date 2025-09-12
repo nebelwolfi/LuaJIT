@@ -10,11 +10,11 @@ windows_filename(const char * utf8filename, int usz, wchar_t * winbuffer, int ws
 
 FILE *fopenf(const char *filename, const char *mode){
     size_t sz = strlen(filename);
-    wchar_t path[MAX_PATH];
+    wchar_t path[MAX_PATH * 16];
     int winsz = windows_filename(filename, sz, path, sz);
     path[winsz] = 0;
 
-    wchar_t wmode[MAX_PATH];
+    wchar_t wmode[MAX_PATH * 16];
     size_t n = strlen(mode);
     winsz = windows_filename(mode, sz, wmode, sz);
     wmode[n] = 0;
