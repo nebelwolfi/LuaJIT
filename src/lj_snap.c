@@ -614,7 +614,10 @@ void lj_snap_replay(jit_State *J, GCtrace *T)
 	tr = 0;
       else
 	tr = snap_replay_const(J, ir);
-    } else if (!regsp_used(ir->prev)) {
+    } else if (!regsp_used(ir->prev) || regsp_reg(ir->r) == RID_SUNK) {
+      /* Heavy-sunk allocations carry their heavy_restores index in the
+      ** spill byte (REGSP(RID_SUNK, idx)), which regsp_used() mistakes for
+      ** a spill slot. They must be replayed as sunk, not SLOADed. */
       pass23 = 1;
       lj_assertJ(s != 0, "unused slot 0 in snapshot");
       tr = s;
